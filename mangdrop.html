@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag-drop Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container, .drop-zone {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-gap: 10px;
+            margin-bottom: 20px;
+        }
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: #007bff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            border-radius: 10px;
+            position: relative;
+            user-select: none;
+        }
+        .card img {
+            pointer-events: none; 
+            display: none;
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+        }
+        .card.open img {
+            display: block;
+        }
+        .card.matched {
+            background-color: #28a745;
+            cursor: move;
+        }
+        .drop-zone {
+            border: 2px dashed #ccc;
+            padding: 10px;
+            min-height: 110px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+        }
+        #levelCounter {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="levelCounter">Level: 1</div>
+<div id="gameRules">Game rules: find all matches and drag them below</div>
+<div class="game-container" id="gameContainer"></div>
+<div class="drop-zone" id="dropZone"></div>
+<button id="restartButton">Restart the game</button>
+
+<script>
+    const imageNames = ['sausage', 'carrot', 'potato', 'peach'];
+    let level = 1;
+    let images = [];
+    let openedCards = [];
+    let matchedCards = [];
+    const gameContainer = document.getElementById('gameContainer');
+    const dropZone = document.getElementById('dropZone');
+    const levelCounter = document.getElementById('levelCounter');
+    const restartButton = document.getElementById('restartButton');
+
+    function initializeGame() {
+        images = [
+            ...imageNames, ...imageNames
+        ].sort(() => 0.5 - Math.random());
+
+        openedCards = [];
+        matchedCards = [];
+
+        gameContainer.innerHTML = '';
+        dropZone.innerHTML = '';
+
+        images.forEach((image, index) => {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.name = image;
+            card.setAttribute('draggable', false);
+            card.addEventListener('click', handleCardClick);
+
+            const img = document.createElement('img');
+            img.src = `${image}.png`; 
+            img.alt = image;
+
+            card.appendChild(img);
+            gameContainer.appendChild(card);
+        });
+    }
+
+    function handleCardClick(e) {
+        const clickedCard = e.currentTarget;
+
+        if (clickedCard.classList.contains('open') || matchedCards.includes(clickedCard)) {
+            return;
+        }
+
+        clickedCard.classList.add('open');
+        openedCards.push(clickedCard);
+
+        if (openedCards.length === 2) {
+            if (openedCards[0].dataset.name === openedCards[1].dataset.name) {
+                matchedCards.push(...openedCards);
+                openedCards.forEach(card => {
+                    card.classList.add('matched');
+                    card.setAttribute('draggable', true);
+                    card.removeEventListener('click', handleCardClick);
+                    card.addEventListener('dragstart', handleDragStart);
+                });
+                openedCards = [];
+                
+                if (matchedCards.length === images.length) {
+                    setTimeout(() => {
+                        alert('Congrats! You found all matches! Drag them down.');
+                    }, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    openedCards.forEach(card => card.classList.remove('open'));
+                    openedCards = [];
+                }, 1000);
+            }
+        }
+    }
+
+    function handleDragStart(e) {
+        e.dataTransfer.setData('text/plain', e.target.dataset.name);
+        e.target.classList.add('dragging');
+    }
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedName = e.dataTransfer.getData('text');
+        const draggedCard = document.querySelector('.dragging');
+        draggedCard.classList.remove('dragging');
+        const pair = Array.from(dropZone.children).filter(card => card.dataset.name === draggedName);
+        
+        if (pair.length < 2) {
+            dropZone.appendChild(draggedCard);
+            draggedCard.removeEventListener('dragstart', handleDragStart);
+
+            if (dropZone.children.length === images.length) {
+                alert('All matches have been successfully moved! Are you ready for the next level?');
+                level++;
+                levelCounter.textContent = `Level: ${level}`;
+                initializeGame();
+            }
+        }
+    });
+
+    restartButton.addEventListener('click', () => {
+        initializeGame();
+    });
+
+    initializeGame();
+</script>
+
+</body>
+</html>
